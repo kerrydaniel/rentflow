@@ -1,6 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const url = import.meta.env.VITE_SUPABASE_URL?.trim();
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
 
-export const supabase = url && key ? createClient(url, key) : null
+let client = null;
+let configurationError = "";
+
+if (!url || !key) {
+  configurationError = "Supabase environment variables are missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in Netlify.";
+} else {
+  try {
+    client = createClient(url, key);
+  } catch (error) {
+    configurationError = "Supabase configuration is invalid: " + (error?.message || String(error));
+  }
+}
+
+export const supabase = client;
+export const supabaseConfigurationError = configurationError;
