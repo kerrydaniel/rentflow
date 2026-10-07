@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+function parseMpesaDate(v:string){ if(!/^\\d{14}$/.test(v)) return null; const y=Number(v.slice(0,4)),m=Number(v.slice(4,6))-1,d=Number(v.slice(6,8)),h=Number(v.slice(8,10)),mi=Number(v.slice(10,12)),s=Number(v.slice(12,14)); return new Date(Date.UTC(y,m,d,h,mi,s)).toISOString(); }\n\nimport { createClient } from "@supabase/supabase-js";
 
 export default async (req:Request) => {
   if(req.method!=="POST") return new Response("Method not allowed",{status:405});
@@ -14,12 +14,13 @@ export default async (req:Request) => {
   const get=(name:string)=>items.find((x:any)=>x.Name===name)?.Value;
   const success=Number(callback.ResultCode)===0;
   if(!tx) return Response.json({ResultCode:0,ResultDesc:"Accepted"});
+  if(tx.status==="success") return Response.json({ResultCode:0,ResultDesc:"Accepted"});
   await db.from("mpesa_transactions").update({
     status:success?"success":"failed",result_code:Number(callback.ResultCode),result_description:callback.ResultDesc||"",
     mpesa_receipt:success?String(get("MpesaReceiptNumber")||""):null,
     amount:success?Number(get("Amount")||tx.amount):tx.amount,
     phone:success?String(get("PhoneNumber")||tx.phone):tx.phone,
-    transaction_date:success?new Date(String(get("TransactionDate")||"")):null,
+    transaction_date:success?parseMpesaDate(String(get("TransactionDate")||"")):null,
     raw_payload:payload,updated_at:new Date().toISOString()
   }).eq("id",tx.id);
   if(success && tx.tenant_id && tx.property_id){
