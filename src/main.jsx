@@ -142,4 +142,15 @@ function Auth(){const[email,setEmail]=useState(""),[password,setPassword]=useSta
 function Onboarding({user,done}){const[name,setName]=useState(""),[location,setLocation]=useState("Kenya"),[error,setError]=useState("");async function create(e){e.preventDefault();const r=await supabase.from("properties").insert({owner_id:user.id,name,location}).select().single();if(r.error){setError(r.error.message);return}const m=await supabase.from("property_members").upsert({property_id:r.data.id,user_id:user.id,role:"owner"});if(m.error)setError(m.error.message);else done()}return <div className="auth"><div><div className="brand"><Building2/><b>RentFlow</b></div><h1>Set up your property</h1><form onSubmit={create}><input placeholder="Property name" value={name} onChange={e=>setName(e.target.value)} required/><input placeholder="Location" value={location} onChange={e=>setLocation(e.target.value)}/><button>Create property</button></form>{error&&<p className="error">{error}</p>}</div></div>}
 function ConfigurationScreen({error}){return <div className="auth"><div><div className="brand"><Building2/><b>RentFlow</b></div><h1>RentFlow is not configured</h1><p>The application loaded, but the Supabase connection is not configured correctly.</p><div className="warning"><b>Netlify environment variables required</b><p><code>VITE_SUPABASE_URL</code><br/><code>VITE_SUPABASE_PUBLISHABLE_KEY</code></p><p>{error}</p></div><button onClick={()=>window.location.reload()}><RefreshCw/>Reload</button></div></div>}
 function Landing(){return <div className="landing"><div className="brand"><Building2/><b>RentFlow</b></div><h1>Property management without spreadsheet chaos.</h1><p>Tenants, rent, invoices, payments, utilities, leases and owner reporting in one secure workspace.</p><a href="#signin">Sign in to RentFlow</a></div>}
-createRoot(document.getElementById("root")).render(<App/>);
+class StartupErrorBoundary extends React.Component{
+ constructor(props){super(props);this.state={error:null}}
+ static getDerivedStateFromError(error){return {error}}
+ componentDidCatch(error,info){console.error("RentFlow startup error",error,info)}
+ render(){
+  if(this.state.error)return <div className="auth"><div><div className="brand"><Building2/><b>RentFlow</b></div><h1>RentFlow encountered an error</h1><p>The site loaded, but the application encountered a startup error.</p><div className="warning"><b>Error</b><p>{this.state.error?.message||String(this.state.error)}</p></div><button onClick={()=>window.location.reload()}><RefreshCw/>Reload</button></div></div>;
+  return this.props.children;
+ }
+}
+window.addEventListener("error",e=>console.error("RentFlow window error",e.error||e.message));
+window.addEventListener("unhandledrejection",e=>console.error("RentFlow promise error",e.reason));
+createRoot(document.getElementById("root")).render(<StartupErrorBoundary><App/></StartupErrorBoundary>);
