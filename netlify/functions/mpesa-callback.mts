@@ -1,4 +1,4 @@
-function parseMpesaDate(v:string){ if(!/^\\d{14}$/.test(v)) return null; const y=Number(v.slice(0,4)),m=Number(v.slice(4,6))-1,d=Number(v.slice(6,8)),h=Number(v.slice(8,10)),mi=Number(v.slice(10,12)),s=Number(v.slice(12,14)); return new Date(Date.UTC(y,m,d,h,mi,s)).toISOString(); }
+function parseMpesaDate(v:string){ if(!/^\d{14}$/.test(v)) return null; const y=Number(v.slice(0,4)),m=Number(v.slice(4,6))-1,d=Number(v.slice(6,8)),h=Number(v.slice(8,10)),mi=Number(v.slice(10,12)),s=Number(v.slice(12,14)); return new Date(Date.UTC(y,m,d,h,mi,s)).toISOString(); }
 
 import { createClient } from "@supabase/supabase-js";
 
