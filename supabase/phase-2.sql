@@ -1,0 +1,3 @@
+-- Phase 2 schema is applied to RentCore as migration `phase_2_property_management`.
+-- This file is retained as a source-control marker; the authoritative migration is
+-- stored in Supabase migration history.
