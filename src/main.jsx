@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {createRoot} from "react-dom/client";
 import {Building2,LayoutDashboard,Users,DoorOpen,Receipt,WalletCards,Gauge,FileText,UserRound,MessageSquare,LogOut,Plus,RefreshCw,Search,Download,Printer,Send,Settings,CalendarClock} from "lucide-react";
-import {supabase} from "./supabase";
+import {supabase,supabaseConfigurationError} from "./supabase";
 import "./styles.css";
 
 const money=n=>new Intl.NumberFormat("en-KE",{style:"currency",currency:"KES",maximumFractionDigits:0}).format(Number(n||0));
@@ -35,7 +35,7 @@ function App(){
  const act=async(fn,ok)=>{try{const r=await fn();if(r?.error)throw r.error;setMessage(ok);await refresh()}catch(e){setMessage(e.message||String(e))}};
  async function generate(){const r=await supabase.rpc("generate_monthly_invoices",{p_property_id:property.id,p_billing_month:month()});setMessage(r.error?r.error.message:`${r.data?.created||0} invoices generated for ${month().slice(0,7)}`);await refresh()}
  async function signout(){await supabase.auth.signOut();setProperty(null)}
- if(!supabase)return <Landing/>;
+ if(!supabase)return <ConfigurationScreen error={supabaseConfigurationError}/>;
  if(loading)return <div className="center"><RefreshCw className="spin"/>Loading RentFlow…</div>;
  if(!session)return <Auth/>;
  if(!property)return <Onboarding user={session.user} done={load}/>;
@@ -140,5 +140,6 @@ function SettingsPage({property,data}){return <><Panel title="Property settings"
 
 function Auth(){const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[signup,setSignup]=useState(false),[error,setError]=useState(""),[sent,setSent]=useState(false);async function submit(e){e.preventDefault();setError("");const r=signup?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});if(r.error)setError(r.error.message);else if(signup)setSent(true)}return <div className="auth"><div><div className="brand"><Building2/><b>RentFlow</b></div><h1>{signup?"Create your account":"Welcome back"}</h1><p>Secure property management for rent, tenants and owners.</p><form onSubmit={submit}><input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required/><input type="password" placeholder="Password" minLength="6" value={password} onChange={e=>setPassword(e.target.value)} required/><button>{signup?"Create account":"Sign in"}</button></form>{sent&&<p className="success">Check your email to confirm your account.</p>}{error&&<p className="error">{error}</p>}<button className="link" onClick={()=>setSignup(!signup)}>{signup?"Already registered? Sign in":"Create a new account"}</button></div></div>}
 function Onboarding({user,done}){const[name,setName]=useState(""),[location,setLocation]=useState("Kenya"),[error,setError]=useState("");async function create(e){e.preventDefault();const r=await supabase.from("properties").insert({owner_id:user.id,name,location}).select().single();if(r.error){setError(r.error.message);return}const m=await supabase.from("property_members").upsert({property_id:r.data.id,user_id:user.id,role:"owner"});if(m.error)setError(m.error.message);else done()}return <div className="auth"><div><div className="brand"><Building2/><b>RentFlow</b></div><h1>Set up your property</h1><form onSubmit={create}><input placeholder="Property name" value={name} onChange={e=>setName(e.target.value)} required/><input placeholder="Location" value={location} onChange={e=>setLocation(e.target.value)}/><button>Create property</button></form>{error&&<p className="error">{error}</p>}</div></div>}
+function ConfigurationScreen({error}){return <div className="auth"><div><div className="brand"><Building2/><b>RentFlow</b></div><h1>RentFlow is not configured</h1><p>The application loaded, but the Supabase connection is not configured correctly.</p><div className="warning"><b>Netlify environment variables required</b><p><code>VITE_SUPABASE_URL</code><br/><code>VITE_SUPABASE_PUBLISHABLE_KEY</code></p><p>{error}</p></div><button onClick={()=>window.location.reload()}><RefreshCw/>Reload</button></div></div>}
 function Landing(){return <div className="landing"><div className="brand"><Building2/><b>RentFlow</b></div><h1>Property management without spreadsheet chaos.</h1><p>Tenants, rent, invoices, payments, utilities, leases and owner reporting in one secure workspace.</p><a href="#signin">Sign in to RentFlow</a></div>}
 createRoot(document.getElementById("root")).render(<App/>);
