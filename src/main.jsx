@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{Component,useEffect,useState} from "react";
 import {createRoot} from "react-dom/client";
 import {Building2,LayoutDashboard,Users,DoorOpen,Receipt,WalletCards,Gauge,CalendarClock,UserRound,FileText,Settings,LogOut,RefreshCw,Plus,Search,Printer,X,Pencil,Trash2,BarChart3,TrendingUp} from "lucide-react";
 import {supabase,supabaseConfigurationError} from "./supabase";
@@ -7,6 +7,16 @@ import "./styles.css";
 const money=n=>new Intl.NumberFormat("en-KE",{style:"currency",currency:"KES",maximumFractionDigits:0}).format(Number(n||0));
 const monthStart=()=>new Date().toISOString().slice(0,7)+"-01";
 const today=()=>new Date().toISOString().slice(0,10);
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error("RentFlow render error:", error, info); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return <div className="auth"><div className="authcard"><div className="brand"><Building2/><b>RentFlow</b></div><h1>RentFlow encountered an error</h1><p className="muted">The application loaded, but a page failed to render.</p><div className="errorbox"><b>Error:</b><br/>{this.state.error?.message || String(this.state.error)}</div><button className="primary" onClick={()=>window.location.reload()}>Reload application</button></div></div>;
+  }
+}
 
 function Auth(){
  const [mode,setMode]=useState("signin"),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[sent,setSent]=useState(false);
@@ -57,4 +67,4 @@ function Owners({data}){return <><Toolbar title="Owners"/><Table heads={["Owner"
 function Reports({data}){const totalCollected=data.payments.reduce((s,x)=>s+Number(x.amount||0),0),expenses=data.expenses.reduce((s,x)=>s+Number(x.amount||0),0),billed=data.invoices.reduce((s,x)=>s+Number(x.total||0),0),outstanding=data.invoices.reduce((s,i)=>s+Math.max(0,Number(i.total||0)-data.allocations.filter(a=>a.invoice_id===i.id).reduce((z,a)=>z+Number(a.amount||0),0)),0);const months=Array.from({length:6},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-i);const key=d.toISOString().slice(0,7);return {key,collected:data.payments.filter(x=>String(x.payment_date||"").startsWith(key)).reduce((s,x)=>s+Number(x.amount||0),0),billed:data.invoices.filter(x=>String(x.billing_month||"").startsWith(key)).reduce((s,x)=>s+Number(x.total||0),0)}}).reverse();const max=Math.max(1,...months.map(x=>Math.max(x.collected,x.billed)));const paidRate=billed?Math.round(totalCollected/billed*100):0;return <><div className="pagehead"><div><h1>Reports & insights</h1><p>Financial and portfolio performance at a glance.</p></div><button onClick={()=>window.print()}><Printer/>Print / PDF</button></div><div className="cards"><Card label="Total billed" value={money(billed)} sub="All recorded invoices"/><Card label="Total collected" value={money(totalCollected)} sub={paidRate+"% of billed"}/><Card label="Outstanding" value={money(outstanding)} sub="Current invoice balance"/><Card label="Net cash" value={money(totalCollected-expenses)} sub="Collections less expenses"/></div><div className="reportgrid"><Panel title="Collections trend"><div className="chart">{months.map(m=><div className="chartcol" key={m.key}><div className="bars"><div className="bar billedbar" style={{height:(m.billed/max*100)+"%"}}></div><div className="bar collectedbar" style={{height:(m.collected/max*100)+"%"}}></div></div><small>{m.key.slice(5)}</small></div>)}</div><div className="legend"><span><i className="legendbox billedbox"></i>Billed</span><span><i className="legendbox collectedbox"></i>Collected</span></div></Panel><Panel title="Portfolio health"><Stat label="Units" value={data.units.length}/><Stat label="Occupied" value={data.units.filter(x=>x.status==="occupied").length}/><Stat label="Vacant" value={data.units.filter(x=>x.status==="vacant").length}/><Stat label="Active tenants" value={data.tenants.filter(x=>x.status==="active").length}/><Stat label="Lease renewals due" value={data.leases.filter(x=>x.end_date&&new Date(x.end_date)<=new Date(Date.now()+90*86400000)&&x.renewal_status!=="renewed").length}/></Panel></div><div className="reportgrid"><Panel title="Utility spend"><div className="utilityreport">{Object.entries(data.utilityBills.reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.total_amount||0),a),{})).sort((a,b)=>b[1]-a[1]).map(([k,v])=><div className="utilityrow" key={k}><span>{k.replace("_"," ")}</span><b>{money(v)}</b></div>)}</div></Panel><Panel title="Management snapshot"><Stat label="Average invoice" value={money(data.invoices.length?billed/data.invoices.length:0)}/><Stat label="Expenses" value={money(expenses)}/><Stat label="Collection gap" value={money(Math.max(0,billed-totalCollected))}/><Stat label="Collection rate" value={paidRate+"%"}/></Panel></div></>}
 function SettingsPage({property}){return <><Toolbar title="Settings"/><Panel title="Property"><Stat label="Name" value={property.name}/><Stat label="Location" value={property.location||"—"}/><Stat label="Currency" value={property.currency||"KES"}/></Panel></>}
 
-createRoot(document.getElementById("root")).render(<App/>);
+createRoot(document.getElementById("root")).render(<ErrorBoundary><App/></ErrorBoundary>);
